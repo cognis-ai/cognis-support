@@ -142,7 +142,8 @@ class Captain::Llm::AssistantActionClassifierService < Llm::BaseAiService
 
   def system_prompt
     Captain::Llm::SystemPromptsService.assistant_action_classifier(
-      has_custom_instructions: @assistant.config['instructions'].present?
+      has_custom_instructions: @assistant.config['instructions'].present?,
+      resolved_context_activity_marker: @assistant.resolved_context_activity_marker?
     )
   end
 end

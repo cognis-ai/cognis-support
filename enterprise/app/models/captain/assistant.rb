@@ -36,7 +36,16 @@ class Captain::Assistant < ApplicationRecord
   has_many :copilot_threads, dependent: :destroy_async
   has_many :scenarios, class_name: 'Captain::Scenario', dependent: :destroy_async
 
-  store_accessor :config, :temperature, :feature_faq, :feature_memory, :feature_contact_attributes, :product_name
+  VALID_RESOLVED_CONTEXT_HANDLING_MODES = %w[default activity_marker strict_reset].freeze
+
+  store_accessor :config, :temperature, :feature_faq, :feature_memory, :feature_contact_attributes, :product_name,
+                 :resolved_context_handling
+
+  VALID_RESOLVED_CONTEXT_HANDLING_MODES.each do |mode|
+    define_method("resolved_context_#{mode}?") do
+      resolved_context_handling_mode == mode
+    end
+  end
 
   validates :name, presence: true
   validates :description, presence: true
@@ -83,6 +92,11 @@ class Captain::Assistant < ApplicationRecord
       created_at: created_at,
       type: 'captain_assistant'
     }
+  end
+
+  def resolved_context_handling_mode
+    mode = config['resolved_context_handling'].presence || 'default'
+    VALID_RESOLVED_CONTEXT_HANDLING_MODES.include?(mode) ? mode : 'default'
   end
 
   private
