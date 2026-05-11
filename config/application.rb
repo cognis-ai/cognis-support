@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+﻿# frozen_string_literal: true
 
 require_relative 'boot'
 
@@ -40,13 +40,13 @@ module Chatwoot
     config.rails_i18n.enabled_modules = [:pluralization]
 
     config.eager_load_paths << Rails.root.join('lib')
-    config.eager_load_paths << Rails.root.join('enterprise/lib')
-    config.eager_load_paths << Rails.root.join('enterprise/listeners')
+    config.eager_load_paths << Rails.root.join('enterprise/lib') if Dir.exist?(Rails.root.join('enterprise/lib'))
+    config.eager_load_paths << Rails.root.join('enterprise/listeners') if Dir.exist?(Rails.root.join('enterprise/listeners'))
     # rubocop:disable Rails/FilePath
-    config.eager_load_paths += Dir["#{Rails.root}/enterprise/app/**"]
+    enterprise_app_paths = Dir["#{Rails.root}/enterprise/app/**"]; config.eager_load_paths += enterprise_app_paths if enterprise_app_paths.any?
     # rubocop:enable Rails/FilePath
     # Add enterprise views to the view paths
-    config.paths['app/views'].unshift('enterprise/app/views')
+    config.paths['app/views'].unshift('enterprise/app/views') if Dir.exist?(Rails.root.join('enterprise/app/views'))
 
     # Load enterprise initializers alongside standard initializers
     enterprise_initializers = Rails.root.join('enterprise/config/initializers')
