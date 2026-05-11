@@ -1,0 +1,84 @@
+name: Upstream rebase
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: cognis/main
+          token: ${{ secrets.REBASE_BOT_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "cognis-rebase-bot"
+          git config user.email "bot@cognisai.com"
+          git config rerere.enabled true
+          git config rerere.autoUpdate true
+
+      - name: Restore rerere cache
+        run: |
+          mkdir -p .git/rr-cache
+          if [ -d infra/rerere-cache ]; then
+            cp -R infra/rerere-cache/. .git/rr-cache/
+          fi
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/chatwoot/chatwoot
+          git fetch upstream develop
+
+      - name: Update vendor/upstream branch
+        run: |
+          git checkout -B vendor/upstream upstream/develop
+          git push origin vendor/upstream --force
+
+      - name: Try rebase
+        id: rebase
+        run: |
+          git checkout -B rebase-staging cognis/main
+          if git rebase vendor/upstream; then
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+            git rebase --abort
+          fi
+
+      - name: Push & open PR on clean rebase
+        if: steps.rebase.outputs.result == 'clean'
+        env:
+          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN }}
+        run: |
+          AHEAD=$(git rev-list --count cognis/main..rebase-staging)
+          if [ "$AHEAD" = "0" ]; then
+            echo "No new upstream commits."
+            exit 0
+          fi
+          git push origin rebase-staging --force
+          gh pr create \
+            --base cognis/main \
+            --head rebase-staging \
+            --title "chore: upstream rebase $(date -I)" \
+            --body "Automated nightly rebase onto vendor/upstream. $AHEAD new upstream commit(s)." \
+            --label rebase-auto
+
+      - name: Open issue on conflict
+        if: steps.rebase.outputs.result == 'conflict'
+        env:
+          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Upstream rebase conflict $(date -I)" \
+            --label rebase-conflict \
+            --body "Nightly rebase onto vendor/upstream hit conflicts. Manual resolution required."
