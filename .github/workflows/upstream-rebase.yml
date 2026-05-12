@@ -18,7 +18,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: cognis/main
-          token: ${{ secrets.REBASE_BOT_TOKEN }}
+          # Prefer a PAT so the resulting PR push triggers downstream CI
+          # (GITHUB_TOKEN-driven pushes intentionally don't). Falls back to
+          # GITHUB_TOKEN so the bot still works before a PAT is configured.
+          token: ${{ secrets.REBASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Configure git
         run: |
@@ -58,7 +61,7 @@ jobs:
       - name: Push & open PR on clean rebase
         if: steps.rebase.outputs.result == 'clean'
         env:
-          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           AHEAD=$(git rev-list --count cognis/main..rebase-staging)
           if [ "$AHEAD" = "0" ]; then
@@ -76,7 +79,7 @@ jobs:
       - name: Open issue on conflict
         if: steps.rebase.outputs.result == 'conflict'
         env:
-          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
             --title "Upstream rebase conflict $(date -I)" \
