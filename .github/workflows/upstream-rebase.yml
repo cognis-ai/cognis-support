@@ -61,26 +61,26 @@ jobs:
           # Recurring conflict shape: strip commit deleted enterprise/*; upstream
           # is still developing those files. Strip is permanent intent — keep
           # the deletion. SAFETY: restricted to enterprise/ paths only.
-          DU=$(git status --porcelain | awk '/^DU / {print $2}')
-          if [ -z "$DU" ]; then
+          UD=$(git status --porcelain | awk '/^UD / {print $2}')
+          if [ -z "$UD" ]; then
             echo "result=conflict" >> "$GITHUB_OUTPUT"
             git rebase --abort 2>/dev/null
             exit 0
           fi
-          for f in $DU; do
+          for f in $UD; do
             case "$f" in
               enterprise/*) ;;
-              *) echo "result=conflict (non-enterprise DU)" >> "$GITHUB_OUTPUT"
+              *) echo "result=conflict (non-enterprise UD)" >> "$GITHUB_OUTPUT"
                  git rebase --abort 2>/dev/null
                  exit 0;;
             esac
           done
           if [ -n "$(git status --porcelain | awk '/^(UU|AA|DD|AU|UA|UD) /')" ]; then
-            echo "result=conflict (non-DU conflicts)" >> "$GITHUB_OUTPUT"
+            echo "result=conflict (non-UD conflicts)" >> "$GITHUB_OUTPUT"
             git rebase --abort 2>/dev/null
             exit 0
           fi
-          for f in $DU; do git rm -f -- "$f" >/dev/null; done
+          for f in $UD; do git rm -f -- "$f" >/dev/null; done
           GIT_EDITOR=true git -c commit.gpgsign=false rebase --continue
           if [ $? -ne 0 ]; then
             echo "result=conflict (continue failed)" >> "$GITHUB_OUTPUT"
