@@ -49,44 +49,73 @@ jobs:
 
       - name: Try rebase (auto-resolves enterprise/ modify-delete)
         id: rebase
+        shell: bash
         run: |
           set +e
+          set +o pipefail
+
           git checkout -B rebase-staging cognis/main
           git rebase vendor/upstream
-          if [ $? -eq 0 ]; then
+          REBASE_RC=$?
+          if [ $REBASE_RC -eq 0 ]; then
+            echo "[ok] rebase clean"
             echo "result=clean" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "[info] rebase rc=$REBASE_RC — entering auto-resolve path"
 
-          # Recurring conflict shape: strip commit deleted enterprise/*; upstream
-          # is still developing those files. Strip is permanent intent — keep
-          # the deletion. SAFETY: restricted to enterprise/ paths only.
-          UD=$(git status --porcelain | awk '/^UD / {print $2}')
-          if [ -z "$UD" ]; then
+          # Strip commit deleted enterprise/*; upstream still develops those.
+          # Auto-resolve by keeping the deletion. Restricted to enterprise/.
+          # Conflict shape during rebase: "us" = vendor/upstream (the new base,
+          # has modifications); "them" = our commit being applied (which deletes).
+          # So porcelain code is UD = "updated by us, deleted by them".
+          echo "[debug] git status --porcelain (head):"
+          git status --porcelain | head -20
+
+          UD_FILES=$(git status --porcelain | awk '/^UD / {print $2}')
+          echo "[debug] UD count: $(echo "$UD_FILES" | grep -c .)"
+
+          if [ -z "$UD_FILES" ]; then
+            echo "[fail] no UD entries; bailing"
             echo "result=conflict" >> "$GITHUB_OUTPUT"
             git rebase --abort 2>/dev/null
             exit 0
           fi
-          for f in $UD; do
+
+          for f in $UD_FILES; do
             case "$f" in
               enterprise/*) ;;
-              *) echo "result=conflict (non-enterprise UD)" >> "$GITHUB_OUTPUT"
+              *) echo "[fail] non-enterprise UD: $f"
+                 echo "result=conflict" >> "$GITHUB_OUTPUT"
                  git rebase --abort 2>/dev/null
                  exit 0;;
             esac
           done
-          if [ -n "$(git status --porcelain | awk '/^(UU|AA|DD|AU|UA|UD) /')" ]; then
-            echo "result=conflict (non-UD conflicts)" >> "$GITHUB_OUTPUT"
+
+          OTHER_CONFLICTS=$(git status --porcelain | awk '/^(UU|AA|DD|AU|UA) /')
+          if [ -n "$OTHER_CONFLICTS" ]; then
+            echo "[fail] non-UD conflict types present:"
+            echo "$OTHER_CONFLICTS" | head -20
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
             git rebase --abort 2>/dev/null
             exit 0
           fi
-          for f in $UD; do git rm -f -- "$f" >/dev/null; done
+
+          echo "[ok] all conflicts are enterprise/ UD — resolving by deletion"
+          for f in $UD_FILES; do
+            git rm -f -- "$f" >/dev/null
+          done
+
           GIT_EDITOR=true git -c commit.gpgsign=false rebase --continue
-          if [ $? -ne 0 ]; then
-            echo "result=conflict (continue failed)" >> "$GITHUB_OUTPUT"
+          CONT_RC=$?
+          if [ $CONT_RC -ne 0 ]; then
+            echo "[fail] rebase --continue rc=$CONT_RC"
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
             git rebase --abort 2>/dev/null
             exit 0
           fi
+
+          echo "[ok] rebase auto-resolved"
           echo "result=clean" >> "$GITHUB_OUTPUT"
           echo "auto_resolved=true" >> "$GITHUB_OUTPUT"
 
