@@ -130,14 +130,21 @@ jobs:
             exit 0
           fi
           git push origin rebase-staging --force
-          PR_URL=$(gh pr create \
+          # PR-creation needs either (a) org setting "Allow GitHub Actions to
+          # create and approve pull requests" enabled, or (b) a REBASE_BOT_TOKEN
+          # PAT. Until one is set up, GITHUB_TOKEN gets 403 here. The rebased
+          # branch is pushed regardless — operators can open the PR manually
+          # at the URL printed in `remote:` output.
+          if ! PR_URL=$(gh pr create \
             --base cognis/main \
             --head rebase-staging \
             --title "chore: upstream rebase $(date -I)" \
-            --body "Automated nightly rebase onto vendor/upstream. $AHEAD new upstream commit(s).")
+            --body "Automated nightly rebase onto vendor/upstream. $AHEAD new upstream commit(s)." 2>&1); then
+            echo "::warning::PR creation blocked (likely org policy). Branch is pushed; open the PR manually."
+            echo "Detail: $PR_URL"
+            exit 0
+          fi
           echo "Created: $PR_URL"
-          # Label separately — --label on create uses a code path that fails
-          # inside this workflow's GITHUB_TOKEN scope. --add-label after works.
           gh pr edit "$PR_URL" --add-label rebase-auto 2>/dev/null || true
 
       - name: Open issue on conflict
@@ -145,8 +152,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REBASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          ISSUE_URL=$(gh issue create \
+          if ! ISSUE_URL=$(gh issue create \
             --title "Upstream rebase conflict $(date -I)" \
-            --body "Nightly rebase onto vendor/upstream hit conflicts. Manual resolution required.")
+            --body "Nightly rebase onto vendor/upstream hit conflicts. Manual resolution required." 2>&1); then
+            echo "::warning::Issue creation failed; check ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} for details."
+            echo "Detail: $ISSUE_URL"
+            exit 0
+          fi
           echo "Created: $ISSUE_URL"
           gh issue edit "$ISSUE_URL" --add-label rebase-conflict 2>/dev/null || true
