@@ -47,16 +47,48 @@ jobs:
           git checkout -B vendor/upstream upstream/develop
           git push origin vendor/upstream --force
 
-      - name: Try rebase
+      - name: Try rebase (auto-resolves enterprise/ modify-delete)
         id: rebase
         run: |
+          set +e
           git checkout -B rebase-staging cognis/main
-          if git rebase vendor/upstream; then
+          git rebase vendor/upstream
+          if [ $? -eq 0 ]; then
             echo "result=clean" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=conflict" >> "$GITHUB_OUTPUT"
-            git rebase --abort
+            exit 0
           fi
+
+          # Recurring conflict shape: strip commit deleted enterprise/*; upstream
+          # is still developing those files. Strip is permanent intent — keep
+          # the deletion. SAFETY: restricted to enterprise/ paths only.
+          DU=$(git status --porcelain | awk '/^DU / {print $2}')
+          if [ -z "$DU" ]; then
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+            git rebase --abort 2>/dev/null
+            exit 0
+          fi
+          for f in $DU; do
+            case "$f" in
+              enterprise/*) ;;
+              *) echo "result=conflict (non-enterprise DU)" >> "$GITHUB_OUTPUT"
+                 git rebase --abort 2>/dev/null
+                 exit 0;;
+            esac
+          done
+          if [ -n "$(git status --porcelain | awk '/^(UU|AA|DD|AU|UA|UD) /')" ]; then
+            echo "result=conflict (non-DU conflicts)" >> "$GITHUB_OUTPUT"
+            git rebase --abort 2>/dev/null
+            exit 0
+          fi
+          for f in $DU; do git rm -f -- "$f" >/dev/null; done
+          GIT_EDITOR=true git -c commit.gpgsign=false rebase --continue
+          if [ $? -ne 0 ]; then
+            echo "result=conflict (continue failed)" >> "$GITHUB_OUTPUT"
+            git rebase --abort 2>/dev/null
+            exit 0
+          fi
+          echo "result=clean" >> "$GITHUB_OUTPUT"
+          echo "auto_resolved=true" >> "$GITHUB_OUTPUT"
 
       - name: Push & open PR on clean rebase
         if: steps.rebase.outputs.result == 'clean'
