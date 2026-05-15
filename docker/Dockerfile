@@ -22,6 +22,14 @@ ENV RAILS_ENV ${RAILS_ENV}
 ARG NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
 ENV NODE_OPTIONS ${NODE_OPTIONS}
 
+# Cognis fork: enterprise/ is stripped (fork doctrine rule #1). Without this
+# flag, ChatwootApp.enterprise? sees the empty enterprise/ stub directory and
+# returns true, then InjectEnterpriseEditionModule.const_get_maybe_false
+# crashes during boot (NoMethodError: const_defined? on false) because the
+# Enterprise:: namespace was removed. Setting DISABLE_ENTERPRISE short-circuits
+# the check at lib/chatwoot_app.rb:enterprise?.
+ENV DISABLE_ENTERPRISE=true
+
 ENV BUNDLE_PATH="/gems"
 
 RUN apk update && apk add --no-cache \
@@ -119,6 +127,10 @@ ENV BUNDLE_FORCE_RUBY_PLATFORM ${BUNDLE_FORCE_RUBY_PLATFORM}
 ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 ENV BUNDLE_PATH="/gems"
+
+# Cognis fork: keep enterprise/ stripped at runtime too (see pre-builder
+# stage for explanation).
+ENV DISABLE_ENTERPRISE=true
 
 RUN apk update && apk add --no-cache \
   build-base \
