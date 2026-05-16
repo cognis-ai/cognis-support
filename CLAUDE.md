@@ -33,6 +33,10 @@ Default = Pattern A (Bridge proxy). Cognis portal calls Bridge, Bridge holds the
 
 Pattern B (rack middleware in this repo) only if direct dashboard access is required. One file: `app/middleware/clerk_bridge_auth.rb`.
 
+## Cost policy
+
+This fork inherits Cognis's managed-SaaS cost policy — see `../cognis-platform/docs/specs/cost-policy.md` for the full per-fork list and rationale. For `cognis-support` specifically, in production deploys DO NOT set: `SENTRY_DSN`, `NEW_RELIC_LICENSE_KEY`, `SCOUT_KEY`, `ELASTIC_APM_SERVER_URL`, `ELASTIC_APM_SECRET_TOKEN`, `AMPLITUDE_API_KEY`. All are optional in upstream Chatwoot and stay inert without env vars. Use Langfuse + internal Prometheus instead.
+
 ## What NOT to do
 
 - Don't run Chatwoot's Enterprise install scripts
