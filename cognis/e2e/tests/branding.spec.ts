@@ -6,6 +6,11 @@ import { test, expect } from '@playwright/test';
 // read "Chatwoot".
 const BRAND = 'Cognis Support';
 
+// Brand primary — design-tokens `color.brand.primary` (canonical value from
+// cognis-platform/packages/design-tokens/tokens.json). Q1 (brand primary vs
+// per-product accent) defaulted to the canonical primary per the theming spec.
+const BRAND_PRIMARY = '#0099ff';
+
 test.describe('Cognis Support — brand integrity', () => {
   test('login page is branded Cognis Support with no upstream product name', async ({
     browser,
@@ -63,5 +68,54 @@ test.describe('Cognis Support — brand integrity', () => {
     await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible();
     const body = await page.locator('body').innerText();
     expect(body, 'no "Chatwoot" in the profile menu').not.toMatch(/chatwoot/i);
+  });
+
+  // ── Brand asset integrity (theming spec §6.1–§6.4) ─────────────────────────
+  // The parity ledger noted the suite "tests visible text, not the logo image";
+  // these close that gap and kill the silent-404 class of W5.1 regressions.
+
+  test('cognis brand SVGs are served with an SVG content type', async ({ page }) => {
+    for (const asset of ['cognis-logo.svg', 'cognis-logo-dark.svg', 'cognis-thumbnail.svg']) {
+      const res = await page.request.get(`/brand-assets/${asset}`);
+      expect(res.status(), `${asset} responds 200`).toBe(200);
+      expect(
+        res.headers()['content-type'] ?? '',
+        `${asset} served as SVG`
+      ).toContain('image/svg');
+    }
+  });
+
+  test('login page logo image actually resolves (not a broken img)', async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
+    await page.goto('/app/login');
+
+    const logo = page.locator('img[src*="cognis-logo"]').first();
+    await expect(logo).toBeVisible();
+    const naturalWidth = await logo.evaluate((el: HTMLImageElement) => el.naturalWidth);
+    expect(naturalWidth, 'logo <img> decoded to a real image').toBeGreaterThan(0);
+    await ctx.close();
+  });
+
+  test('PWA + browser chrome use the brand primary, not upstream blue', async ({ page }) => {
+    const res = await page.request.get('/manifest.json');
+    expect(res.ok()).toBeTruthy();
+    const manifest = await res.json();
+    expect(manifest.theme_color).toBe(BRAND_PRIMARY);
+    expect(manifest.background_color).toBe(BRAND_PRIMARY);
+
+    await page.goto('/app/login');
+    const themeColor = await page.locator('meta[name="theme-color"]').getAttribute('content');
+    expect(themeColor).toBe(BRAND_PRIMARY);
+  });
+
+  test('favicon swap pair is intact (unread-badge feature contract)', async ({ page }) => {
+    // faviconHelper.js swaps /favicon-{size}.png <-> /favicon-badge-{size}.png
+    // on unread — both halves of the pair must exist under the exact names.
+    for (const icon of ['/favicon-32x32.png', '/favicon-badge-32x32.png']) {
+      const res = await page.request.get(icon);
+      expect(res.status(), `${icon} responds 200`).toBe(200);
+      expect(res.headers()['content-type'] ?? '', `${icon} is a PNG`).toContain('image/png');
+    }
   });
 });

@@ -20,7 +20,11 @@ Rails.application.config.after_initialize do
     'LOGO_DARK' => '/brand-assets/cognis-logo-dark.svg',
     'LOGO_THUMBNAIL' => '/brand-assets/cognis-thumbnail.svg',
     'TERMS_URL' => 'https://cognisai.com/terms',
-    'PRIVACY_URL' => 'https://cognisai.com/privacy'
+    'PRIVACY_URL' => 'https://cognisai.com/privacy',
+    # Mailer branding goes through settings, never template edits (theming
+    # spec §3.4). Sender identity (MAILER_SENDER_EMAIL, SMTP_DOMAIN,
+    # MAILER_INBOUND_EMAIL_DOMAIN) stays in the deployment env.
+    'MAILER_SUPPORT_EMAIL' => 'support@cognisai.com'
   }
   branding.each { |k, v| InstallationConfig.find_or_create_by(name: k).update(value: v) }
 end

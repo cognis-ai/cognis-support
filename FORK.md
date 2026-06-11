@@ -32,6 +32,49 @@ Cognis re-implements as follows:
 - Voice → separate Phase 4 product (Cognis Voice)
 - SLA, custom roles, reporting → not in Phase 1 scope
 
+## Branding asset layer (2026-06-11, theming spec + Gate 2)
+
+Per `cognis-platform/docs/design/theming/cognis-support.md` as amended by
+`cognis-platform/docs/design/gate2/cognis-support-verification.md`. All color
+values derive from `cognis-platform/packages/design-tokens/tokens.json`
+(canonical). Accent question Q1 (brand primary vs `color.product.support`) was
+unanswered — defaulted to the canonical `color.brand.primary` `#0099ff`.
+
+**Additive (cognis-owned):**
+
+- `public/brand-assets/cognis-logo.svg`, `cognis-logo-dark.svg`,
+  `cognis-thumbnail.svg` — closes parity gap W5.1. Wordmark = `CognisAi.` in
+  Inter SemiBold (outlined from the fork's bundled
+  `app/javascript/shared/assets/fonts/Inter/Inter-SemiBold.woff2`), `Ai` in
+  `color.brand.primary`, rest `color.brand.fg` / `color.brand.on-dark`;
+  square mark = the press-kit symbol (gradient `color.brand.primary` →
+  `color.brand.navy-deep`, inner white square). Provenance comments embedded
+  in each SVG.
+- `config/initializers/cognis_branding.rb` — added `MAILER_SUPPORT_EMAIL`
+  (mailer branding via settings, never template edits).
+- `cognis/e2e/tests/branding.spec.ts` — 4 new asset-integrity tests (SVG 200s,
+  login logo decodes, theme-color match, favicon/badge swap pair).
+
+**Upstream-file edits (justified, minimal, logged per fork-ops):**
+
+- `public/*.png` icon set (30 files, binary swaps; keep-ours on rebase
+  conflict): `favicon-{16,32,96,512}`, `favicon-badge-{16,32,96}` (badge dot =
+  `color.semantic.critical`; the `faviconHelper.js` filename swap contract is
+  load-bearing — replace, never rename), `android-icon-*`, `apple-icon-*`,
+  `apple-touch-icon*`, `ms-icon-{70,144,150,310}`. All rendered from the
+  `cognis-thumbnail.svg` master geometry. `DISPLAY_MANIFEST` stays `true`.
+- `public/manifest.json` — `background_color`/`theme_color` `#1f93ff` →
+  `#0099ff` (`color.brand.primary`); PWA chrome showed Chatwoot blue under the
+  Cognis name.
+- `app/views/layouts/vueapp.html.erb` — exactly 2 attribute values:
+  `msapplication-TileColor` + `theme-color` meta `#1f93ff` → `#0099ff`.
+
+**Deliberately NOT done:** `public/brand-assets/logo*.svg` in-place overwrite
+(spec §3.3) — gate2 conditioned it on founder sign-off for the incidental
+`/super_admin` reskin (Q3), still unanswered. `ShareModal.vue:98` therefore
+still loads the upstream-named `logo.svg`. Non-English locale sweep — descoped
+to English-only. `LOGOUT_REDIRECT_LINK` — waits for portal SSO Pattern A.
+
 ## Fork-diff target
 
 ≤0.1% of upstream LOC. Tracked on every PR via `git diff vendor/upstream...cognis/main --stat`. Hard cap 5% — build fails above that.

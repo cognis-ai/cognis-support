@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cognis Support">
+  <!--
+    Cognis square mark - generated from brand sources, do not hand-edit.
+    Provenance:
+      geometry: the press-kit "Symbol only" mark (.brandMarkLg,
+        cognis-platform/apps/marketing/app/press-kit/page.module.css):
+        rounded square, 135deg gradient, inner square inset 25%, in white.
+      gradient #0099ff -> #01283c: design-tokens color.brand.primary -> color.brand.navy-deep
+      inner fill #ffffff: design-tokens color.brand.on-dark
+      (cognis-platform/packages/design-tokens/tokens.json)
+  -->
+  <title>Cognis Support</title>
+  <defs>
+    <linearGradient id="cognis-mark-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0099ff"/>
+      <stop offset="1" stop-color="#01283c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#cognis-mark-g)"/>
+  <rect x="128" y="128" width="256" height="256" rx="54.9" fill="#ffffff"/>
+</svg>
