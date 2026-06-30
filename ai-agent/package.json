@@ -1,0 +1,29 @@
+{
+  "name": "cognis-chat-ai-agent",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Cognis Chat — standalone AI sidecar. Chatwoot agent-bot webhook -> Cognis Brain gateway -> reply/escalate. No Bridge.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "mint-key": "tsx scripts/mint-key.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "openai": "^4.79.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

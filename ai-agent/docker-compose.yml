@@ -1,0 +1,26 @@
+# Cognis Chat AI sidecar — standalone. Brings up ONLY the sidecar; it reaches the
+# Chatwoot shell (:3000) and the Cognis Brain gateway (:8100) published on the host.
+# No Bridge, no LiteLLM, no platform DB.
+#
+# Prereqs on the host:
+#   - Chatwoot shell up (this repo's docker-compose.yaml) on :3000
+#   - Cognis Brain gateway up (../../cognis-brain/docker-compose.yml) on :8100
+#   - ./tenants.json present (account_id -> org + tokens + per-org cbk_live_ key)
+services:
+  ai-agent:
+    build: .
+    container_name: cognis-chat-ai-agent
+    ports:
+      - "4100:4100"
+    environment:
+      BRAIN_BASE_URL: "http://host.docker.internal:8100/v1"
+      BRAIN_MODEL: "${BRAIN_MODEL:-cognis-brain-default}"
+      CHATWOOT_BASE_URL: "http://host.docker.internal:3000"
+      PORT: "4100"
+      TENANTS_FILE: "/app/tenants.json"
+      MAX_HISTORY_MESSAGES: "12"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tenants.json:/app/tenants.json:ro
+    restart: unless-stopped

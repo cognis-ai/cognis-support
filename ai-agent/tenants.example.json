@@ -1,0 +1,10 @@
+[
+  {
+    "chatwootAccountId": 1,
+    "cognisOrgId": "org_demo",
+    "adminUserToken": "REPLACE_with_chatwoot_admin_user_api_token",
+    "agentBotToken": "REPLACE_with_chatwoot_agent_bot_access_token",
+    "brainApiKey": "cbk_live_REPLACE_with_per_org_key_from_mint-key_script",
+    "webhookSecret": "REPLACE_with_chatwoot_agent_bot_secret (for V3 HMAC verify)"
+  }
+]
